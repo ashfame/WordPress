@@ -387,6 +387,7 @@ class WP_Plugins_List_Table extends WP_List_Table {
 		list( $plugin_file, $plugin_data ) = $item;
 		$context = $status;
 		$screen = $this->screen;
+		$is_checked = isset( $_GET['checked'] ) && in_array( $plugin_file, $_GET['checked'] ) ? true : false;
 
 		// Pre-order.
 		$actions = array(
@@ -504,7 +505,9 @@ class WP_Plugins_List_Table extends WP_List_Table {
 			$checkbox = '';
 		} else {
 			$checkbox = "<label class='screen-reader-text' for='" . $checkbox_id . "' >" . sprintf( __( 'Select %s' ), $plugin_data['Name'] ) . "</label>"
-				. "<input type='checkbox' name='checked[]' value='" . esc_attr( $plugin_file ) . "' id='" . $checkbox_id . "' />";
+				. "<input type='checkbox' name='checked[]' value='" . esc_attr( $plugin_file ) . "'"
+				. ( $is_checked ? " checked='checked'" : "" )
+				. " id='" . $checkbox_id . "' />";
 		}
 		if ( 'dropins' != $context ) {
 			$description = '<p>' . ( $plugin_data['Description'] ? $plugin_data['Description'] : '&nbsp;' ) . '</p>';

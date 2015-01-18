@@ -99,7 +99,11 @@ if ( $action ) {
 				update_option( 'recently_activated', $recent );
 			}
 
-			wp_redirect( self_admin_url("plugins.php?activate-multi=true&plugin_status=$status&paged=$page&s=$s") );
+			$post_activation_url = self_admin_url( "plugins.php?activate-multi=true&plugin_status=$status&paged=$page&s=$s" );
+			foreach ( $plugins as $checked_plugin ) {
+				$post_activation_url = add_query_arg( 'checked[]', $checked_plugin, $post_activation_url );
+			}
+			wp_redirect( $post_activation_url );
 			exit;
 
 		case 'update-selected' :
@@ -203,7 +207,11 @@ if ( $action ) {
 				update_option( 'recently_activated', $deactivated + (array) get_option( 'recently_activated' ) );
 			}
 
-			wp_redirect( self_admin_url("plugins.php?deactivate-multi=true&plugin_status=$status&paged=$page&s=$s") );
+			$post_deactivation_url = self_admin_url( "plugins.php?deactivate-multi=true&plugin_status=$status&paged=$page&s=$s" );
+			foreach ( $plugins as $checked_plugin ) {
+				$post_deactivation_url = add_query_arg( 'checked[]', $checked_plugin, $post_deactivation_url );
+			}
+			wp_redirect( $post_deactivation_url );
 			exit;
 
 		case 'delete-selected':
