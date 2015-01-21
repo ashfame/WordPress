@@ -188,8 +188,8 @@ function wp_load_alloptions() {
 			$alloptions[$o->option_name] = $o->option_value;
 		}
 
-		// if this is one of those pageload where notoptions_cache isn't set, we insert it into the database directly, and append its default value i.e. empty array to $alloptions
-		if ( ! isset( $alloptions['notoptions_cache'] ) ) {
+		// if we are not using persistent object cache backend and this is one of those pageload where notoptions_cache isn't set, we insert it into the database directly, and append its default value i.e. empty array to $alloptions
+		if ( ! wp_using_ext_object_cache() && ! isset( $alloptions['notoptions_cache'] ) ) {
 			$wpdb->insert( $wpdb->options, array( 'option_name' => 'notoptions_cache', 'option_value' => serialize( array() ) ), array( '%s', '%s' ) );
 			$alloptions['notoptions_cache'] = array();
 		}
