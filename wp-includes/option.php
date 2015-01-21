@@ -51,7 +51,16 @@ function get_option( $option, $default = false ) {
 
 	if ( ! defined( 'WP_INSTALLING' ) ) {
 		// prevent non-existent options from triggering multiple queries
-		$notoptions = wp_cache_get( 'notoptions', 'options' );
+		if ( wp_using_ext_object_cache() ) {
+			$notoptions = wp_cache_get( 'notoptions', 'options' );
+		} else {
+			// don't attempt to look for 'notoptions_cache' in notoptions itself
+			if ( $option == 'notoptions_cache' ) {
+				$notoptions = array(); // treat as if we don't know anything
+			} else {
+				$notoptions = get_option( 'notoptions_cache', array() );
+			}
+		}
 		if ( isset( $notoptions[ $option ] ) ) {
 			/**
 			 * Filter the default value for an option.
@@ -81,8 +90,14 @@ function get_option( $option, $default = false ) {
 					$value = $row->option_value;
 					wp_cache_add( $option, $value, 'options' );
 				} else { // option does not exist, so we must cache its non-existence
-					$notoptions[$option] = true;
-					wp_cache_set( 'notoptions', $notoptions, 'options' );
+					if ( $option != 'notoptions_cache' ) {
+						$notoptions[$option] = true;
+						if ( wp_using_ext_object_cache() ) {
+							wp_cache_set( 'notoptions', $notoptions, 'options' );
+						} else {
+							update_option( 'notoptions_cache', $notoptions );
+						}
+					}
 
 					/** This filter is documented in wp-includes/option.php */
 					return apply_filters( 'default_option_' . $option, $default );
@@ -172,6 +187,13 @@ function wp_load_alloptions() {
 		foreach ( (array) $alloptions_db as $o ) {
 			$alloptions[$o->option_name] = $o->option_value;
 		}
+
+		// if this is one of those pageload where notoptions_cache isn't set, we insert it into the database directly, and append its default value i.e. empty array to $alloptions
+		if ( ! isset( $alloptions['notoptions_cache'] ) ) {
+			$wpdb->insert( $wpdb->options, array( 'option_name' => 'notoptions_cache', 'option_value' => serialize( array() ) ), array( '%s', '%s' ) );
+			$alloptions['notoptions_cache'] = array();
+		}
+
 		if ( !defined( 'WP_INSTALLING' ) || !is_multisite() )
 			wp_cache_add( 'alloptions', $alloptions, 'options' );
 	}
@@ -288,10 +310,18 @@ function update_option( $option, $value ) {
 	if ( ! $result )
 		return false;
 
-	$notoptions = wp_cache_get( 'notoptions', 'options' );
+	if ( wp_using_ext_object_cache() ) {
+		$notoptions = wp_cache_get( 'notoptions', 'options' );
+	} else {
+		$notoptions = get_option( 'notoptions_cache', array() );
+	}
 	if ( is_array( $notoptions ) && isset( $notoptions[$option] ) ) {
 		unset( $notoptions[$option] );
-		wp_cache_set( 'notoptions', $notoptions, 'options' );
+		if ( wp_using_ext_object_cache() ) {
+			wp_cache_set( 'notoptions', $notoptions, 'options' );
+		} else {
+			update_option( 'notoptions_cache', $notoptions );
+		}
 	}
 
 	if ( ! defined( 'WP_INSTALLING' ) ) {
@@ -367,7 +397,11 @@ function add_option( $option, $value = '', $deprecated = '', $autoload = 'yes' )
 	$value = sanitize_option( $option, $value );
 
 	// Make sure the option doesn't already exist. We can check the 'notoptions' cache before we ask for a db query
-	$notoptions = wp_cache_get( 'notoptions', 'options' );
+	if ( wp_using_ext_object_cache() ) {
+		$notoptions = wp_cache_get( 'notoptions', 'options' );
+	} else {
+		$notoptions = get_option( 'notoptions_cache', array() );
+	}
 	if ( !is_array( $notoptions ) || !isset( $notoptions[$option] ) )
 		if ( false !== get_option( $option ) )
 			return false;
@@ -400,10 +434,18 @@ function add_option( $option, $value = '', $deprecated = '', $autoload = 'yes' )
 	}
 
 	// This option exists now
-	$notoptions = wp_cache_get( 'notoptions', 'options' ); // yes, again... we need it to be fresh
+	if ( wp_using_ext_object_cache() ) {
+		$notoptions = wp_cache_get( 'notoptions', 'options' ); // yes, again... we need it to be fresh
+	} else {
+		$notoptions = get_option( 'notoptions_cache', array() );
+	}
 	if ( is_array( $notoptions ) && isset( $notoptions[$option] ) ) {
 		unset( $notoptions[$option] );
-		wp_cache_set( 'notoptions', $notoptions, 'options' );
+		if ( wp_using_ext_object_cache() ) {
+			wp_cache_set( 'notoptions', $notoptions, 'options' );
+		} else {
+			update_option( 'notoptions_cache', $notoptions );
+		}
 	}
 
 	/**
